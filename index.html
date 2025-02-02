@@ -1,11 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Occasional Sounds</title>
-</head>
-<body>
-    
-</body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Occasional Sounds</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            * {
+                font-family: Montserrat;
+            }
+
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-direction: column;
+            }
+
+            h3 {
+                font-size: 22px;
+                z-index: 10;
+            }
+
+            button {
+                outline: none;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 20px;
+                font-weight: 600;
+                font-size: 22px;
+                background-color: blue;
+                color: white;
+                cursor: pointer;
+                transition: 250ms;
+                z-index: 10;
+            }
+
+            button:hover {
+                background-color: rgb(75, 75, 255);
+            }
+
+            div {
+                z-index: 1;
+                background-color: transparent;
+                background-image: url("https://cdn-icons-png.flaticon.com/512/483/483365.png");
+                background-size: cover;
+            }
+        </style>
+    </head>
+    <body>
+        <h3>0 Sound Players Active</h3>
+        <button>Create New Sound Player</button>
+        <script defer>
+            const numberOfSounds = 15;
+            let players = 0;
+
+            function wait(seconds) {
+                return new Promise((resolve) =>
+                    setTimeout(resolve, seconds * 1000)
+                );
+            }
+
+            function playRandomSound() {
+                const randomIndex = Math.floor(Math.random() * numberOfSounds);
+                const audio = new Audio(`./sounds/sound${randomIndex}.mp3`);
+                audio.addEventListener("ended", () => {
+                    audio.src = "";
+                });
+                audio
+                    .play()
+                    .catch((error) =>
+                        console.error("Audio playback failed:", error)
+                    );
+            }
+
+            document
+                .querySelector("button")
+                .addEventListener("click", async () => {
+                    players++;
+                    document.querySelector(
+                        "h3"
+                    ).innerText = `${players} Sound Players Active`;
+                    while (true) {
+                        playRandomSound();
+                        createAnimatedDiv();
+                        const timeout = Math.random() * (120 - 5) + 5;
+                        await wait(timeout);
+                    }
+                });
+            function createAnimatedDiv() {
+                // Create the div
+                const div = document.createElement("div");
+                div.style.width = "50px";
+                div.style.height = "50px";
+                div.style.position = "fixed";
+
+                // Random position
+                const maxX = window.innerWidth - 50;
+                const maxY = window.innerHeight - 50;
+                div.style.left = `${Math.random() * maxX}px`;
+                div.style.top = `${Math.random() * maxY}px`;
+
+                // Initial style for transition
+                div.style.transition = "transform 2s ease, opacity 2s ease";
+                div.style.opacity = "1";
+
+                // Add to the document
+                document.body.appendChild(div);
+
+                // Apply random rotation, shrink, and fade out after a brief delay
+                setTimeout(() => {
+                    let rotation = Math.random() * 360; // Random rotation angle
+                    rotation = Math.random() >= 0.5 ? rotation * -1 : rotation;
+                    div.style.transform = `rotate(${rotation}deg) scale(0)`; // Shrink and rotate
+                    div.style.opacity = "0"; // Fade out
+                }, 1100);
+
+                // Remove the div after the animation ends
+                setTimeout(() => {
+                    div.remove();
+                }, 3100);
+            }
+        </script>
+    </body>
 </html>
