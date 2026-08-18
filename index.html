@@ -1,137 +1,160 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Occasional Sounds</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap"
-            rel="stylesheet"
-        />
-        <style>
-            * {
-                font-family: Montserrat;
-                user-select: none;
-            }
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Sound Garden</title>
+  <style>
+    :root { --ink:#f7f4ec; --muted:#a8aaa3; --panel:#191b19; --line:#30342f; --green:#b8f36b; --orange:#ff9c65; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; color:var(--ink); background:#101210; font:15px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.15; background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px); background-size:48px 48px; mask-image:linear-gradient(to bottom,#000,transparent 70%); }
+    main { width:min(1080px, calc(100% - 32px)); margin:0 auto; padding:54px 0 80px; position:relative; }
+    header { display:flex; justify-content:space-between; gap:32px; align-items:flex-end; margin-bottom:34px; }
+    .eyebrow { color:var(--green); text-transform:uppercase; letter-spacing:.18em; font-size:12px; }
+    h1 { font:700 clamp(38px,7vw,74px)/.95 system-ui,sans-serif; letter-spacing:-.06em; margin:8px 0 14px; max-width:680px; }
+    .lede,.hint,.empty { color:var(--muted); max-width:650px; }
+    .status { text-align:right; white-space:nowrap; }
+    .status strong { display:block; color:var(--green); font:700 34px/1 system-ui,sans-serif; }
+    .toolbar,.card { border:1px solid var(--line); background:color-mix(in srgb,var(--panel) 94%, transparent); border-radius:16px; }
+    .toolbar { display:grid; grid-template-columns:1fr auto auto; gap:18px; align-items:center; padding:18px; margin-bottom:20px; position:sticky; top:12px; z-index:5; box-shadow:0 12px 35px #0007; }
+    .volume { display:flex; align-items:center; gap:12px; }
+    input[type=range] { accent-color:var(--green); width:min(260px,100%); }
+    button,.file-label { border:1px solid var(--line); border-radius:9px; padding:10px 14px; color:var(--ink); background:#252925; font:inherit; font-weight:700; cursor:pointer; }
+    button:hover,.file-label:hover { border-color:var(--green); }
+    button.primary { background:var(--green); color:#111; border-color:var(--green); }
+    button.danger { color:#ffb094; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .grid { display:grid; grid-template-columns:360px 1fr; gap:20px; }
+    .card { padding:22px; }
+    h2 { margin:0 0 16px; font:700 20px system-ui,sans-serif; }
+    label { display:block; color:var(--muted); font-size:12px; margin:13px 0 6px; }
+    input[type=text],input[type=url],input[type=number] { width:100%; border:1px solid var(--line); border-radius:8px; background:#0f110f; color:var(--ink); padding:11px; font:inherit; user-select:text; }
+    input:focus { outline:2px solid #b8f36b55; border-color:var(--green); }
+    .row { display:flex; gap:9px; align-items:center; margin-top:12px; }
+    .row > * { flex:1; }
+    .row button { flex:0 0 auto; }
+    input[type=file] { display:none; }
+    .divider { height:1px; background:var(--line); margin:22px 0; }
+    .group-list { display:grid; gap:10px; }
+    .group { display:grid; grid-template-columns:auto 1fr auto auto; gap:12px; align-items:center; padding:13px; border:1px solid var(--line); border-radius:10px; }
+    .group.selected { border-color:var(--green); background:#b8f36b0a; }
+    .group input { width:18px; height:18px; accent-color:var(--green); }
+    .group-name { font-weight:700; }
+    .group-meta { color:var(--muted); font-size:12px; }
+    .icon { padding:6px 9px; background:transparent; }
+    .sounds { margin-top:20px; }
+    .sound { display:grid; grid-template-columns:1fr auto auto; gap:8px; align-items:center; padding:9px 0; border-top:1px solid var(--line); }
+    .sound-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .sound button { padding:6px 10px; }
+    .now-playing { min-height:24px; color:var(--orange); margin-top:12px; font-size:12px; }
+    .small { font-size:11px; color:var(--muted); }
+    #toast { position:fixed; right:20px; bottom:20px; max-width:360px; background:var(--ink); color:#111; padding:12px 16px; border-radius:9px; transform:translateY(100px); opacity:0; transition:.25s; z-index:10; }
+    #toast.show { transform:none; opacity:1; }
+    @media (max-width:760px) { main{padding-top:30px} header{display:block}.status{text-align:left;margin-top:22px}.grid{grid-template-columns:1fr}.toolbar{grid-template-columns:1fr 1fr}.volume{grid-column:1/-1}.toolbar button{width:100%} }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><div class="eyebrow">A tiny ambient sound machine</div><h1>Sound Garden</h1><div class="lede">Bring your own collections, select the ones you want, and let small sounds appear now and then.</div></div>
+    <div class="status"><strong id="playerCount">0</strong>players active</div>
+  </header>
 
-            html,
-            body {
-                margin: 0;
-                padding: 0;
-                height: 100%;
-                width: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-direction: column;
-            }
+  <section class="toolbar" aria-label="Playback controls">
+    <div class="volume"><span>Volume</span><input id="volume" type="range" min="0" max="1" step="0.01" value="0.65"><output id="volumeValue">65%</output></div>
+    <button class="primary" id="start">+ Start player</button>
+    <button class="danger" id="stop" disabled>Stop all</button>
+  </section>
 
-            h3 {
-                font-size: 22px;
-                z-index: 10;
-            }
+  <div class="grid">
+    <section class="card">
+      <h2>Add a collection</h2>
+      <label for="groupName">Collection name</label>
+      <input id="groupName" type="text" placeholder="Rainy afternoons">
+      <label for="remoteUrl">Remote URL pattern</label>
+      <input id="remoteUrl" type="url" placeholder="https://example.com/sounds/sound{n}.mp3">
+      <div class="small">Use <b>{n}</b> where the number belongs. Plain folder URLs use sound0.mp3, sound1.mp3…</div>
+      <div class="row"><input id="startNumber" type="number" value="0" min="0" aria-label="Starting number"><button id="scan">Scan &amp; add</button></div>
+      <div class="hint" id="scanStatus" aria-live="polite"></div>
+      <div class="divider"></div>
+      <div class="hint">Or choose audio files already on this device. They stay in this browser—nothing is uploaded.</div>
+      <div class="row"><label class="file-label" for="localFiles">Choose audio files</label><input id="localFiles" type="file" accept="audio/*" multiple></div>
+    </section>
 
-            button {
-                outline: none;
-                border: none;
-                border-radius: 6px;
-                padding: 10px 20px;
-                font-weight: 600;
-                font-size: 22px;
-                background-color: blue;
-                color: white;
-                cursor: pointer;
-                transition: 250ms;
-                z-index: 10;
-            }
+    <section class="card">
+      <h2>Your collections</h2>
+      <div id="groups" class="group-list"></div>
+      <div id="empty" class="empty">No collections yet. Add a link or choose some local sounds.</div>
+      <div id="sounds" class="sounds"></div>
+      <div id="nowPlaying" class="now-playing" aria-live="polite"></div>
+    </section>
+  </div>
+</main>
+<div id="toast" role="status"></div>
 
-            button:hover {
-                background-color: rgb(75, 75, 255);
-            }
+<script>
+  const bundled = Array.from({length: 37}, (_, i) => ({name:`sound${i}.mp3`, url:`./sounds/sound${i}.mp3`}));
+  const state = { groups: [], selected: new Set(), players: [], volume: .65, preview: null };
+  const $ = id => document.getElementById(id);
+  const saved = JSON.parse(localStorage.getItem('sound-garden-groups') || '[]');
+  state.groups = [{id:'bundled', name:'Original sounds', kind:'bundled', sounds:bundled}, ...saved];
+  state.selected.add('bundled');
 
-            div {
-                z-index: 1;
-                background-color: transparent;
-                background-image: url("https://cdn-icons-png.flaticon.com/512/483/483365.png");
-                background-size: cover;
-            }
-        </style>
-    </head>
-    <body>
-        <h3>0 Sound Players Active</h3>
-        <button>Create New Sound Player</button>
-        <script defer>
-            const numberOfSounds = 38;
-            let players = 0;
+  const dbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open('sound-garden', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('files');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  async function putFile(key, file) { const db=await dbPromise; return new Promise((res,rej)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').put(file,key);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);}); }
+  async function getFile(key) { const db=await dbPromise; return new Promise((res,rej)=>{const req=db.transaction('files').objectStore('files').get(key);req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error);}); }
+  async function deleteFiles(group) { if(group.kind!=='local')return; const db=await dbPromise; const tx=db.transaction('files','readwrite'); group.sounds.forEach(s=>tx.objectStore('files').delete(s.key)); }
+  function persist() { localStorage.setItem('sound-garden-groups', JSON.stringify(state.groups.filter(g=>g.id!=='bundled'))); }
+  function toast(message) { $('toast').textContent=message; $('toast').classList.add('show'); setTimeout(()=>$('toast').classList.remove('show'),2600); }
+  function escapeHtml(value) { const d=document.createElement('div'); d.textContent=value; return d.innerHTML; }
 
-            function wait(seconds) {
-                return new Promise((resolve) =>
-                    setTimeout(resolve, seconds * 1000)
-                );
-            }
+  function render() {
+    $('empty').hidden=state.groups.length>0;
+    $('groups').innerHTML=state.groups.map(g=>`<div class="group ${state.selected.has(g.id)?'selected':''}">
+      <input type="checkbox" ${state.selected.has(g.id)?'checked':''} data-select="${g.id}" aria-label="Use ${escapeHtml(g.name)}">
+      <div><div class="group-name">${escapeHtml(g.name)}</div><div class="group-meta">${g.sounds.length} sound${g.sounds.length===1?'':'s'} · ${g.kind}</div></div>
+      <button class="icon" data-show="${g.id}" aria-label="Show sounds">⌄</button>
+      ${g.id==='bundled'?'':`<button class="icon danger" data-delete="${g.id}" aria-label="Delete collection">×</button>`}
+    </div>`).join('');
+  }
+  function showSounds(id) {
+    const g=state.groups.find(x=>x.id===id); if(!g)return;
+    $('sounds').innerHTML=`<h2>${escapeHtml(g.name)} <span class="small">(${g.sounds.length})</span></h2>`+g.sounds.map((s,i)=>`<div class="sound"><span class="sound-name">${escapeHtml(s.name)}</span><button data-preview="${id}:${i}">Preview</button><button data-play="${id}:${i}">Play</button></div>`).join('');
+  }
+  async function soundSource(sound) { if(sound.url)return sound.url; const file=await getFile(sound.key); if(!file)throw new Error('Local file is missing'); return URL.createObjectURL(file); }
+  async function playSound(sound, preview=false) {
+    try { if(preview&&state.preview){state.preview.pause();state.preview=null;} const src=await soundSource(sound); const audio=new Audio(src); audio.volume=state.volume; if(preview)state.preview=audio; audio.onended=()=>{if(src.startsWith('blob:'))URL.revokeObjectURL(src);if(state.preview===audio)state.preview=null;}; await audio.play(); $('nowPlaying').textContent=`Playing · ${sound.name}`; }
+    catch(error){ toast(`Could not play sound: ${error.message}`); }
+  }
+  function selectedSounds() { return state.groups.filter(g=>state.selected.has(g.id)).flatMap(g=>g.sounds); }
+  function schedulePlayer(player) { if(!player.active)return; const delay=(Math.random()*115+5)*1000; player.timer=setTimeout(async()=>{const list=selectedSounds();if(list.length)await playSound(list[Math.floor(Math.random()*list.length)]);schedulePlayer(player);},delay); }
+  function updatePlayers() { $('playerCount').textContent=state.players.length; $('stop').disabled=!state.players.length; }
 
-            function playRandomSound() {
-                const randomIndex = Math.floor(Math.random() * numberOfSounds);
-                const audio = new Audio(`./sounds/sound${randomIndex}.mp3`);
-                audio.addEventListener("ended", () => {
-                    audio.src = "";
-                });
-                audio
-                    .play()
-                    .catch((error) =>
-                        console.error("Audio playback failed:", error)
-                    );
-            }
+  $('start').onclick=()=>{ if(!selectedSounds().length)return toast('Select a collection with sounds first.'); const player={active:true,timer:null};state.players.push(player);playSound(selectedSounds()[Math.floor(Math.random()*selectedSounds().length)]);schedulePlayer(player);updatePlayers(); };
+  $('stop').onclick=()=>{state.players.forEach(p=>{p.active=false;clearTimeout(p.timer)});state.players=[];updatePlayers();};
+  $('volume').oninput=e=>{state.volume=+e.target.value;$('volumeValue').textContent=`${Math.round(state.volume*100)}%`;if(state.preview)state.preview.volume=state.volume;};
+  $('groups').onclick=async e=>{const select=e.target.dataset.select;if(select){state.selected.has(select)?state.selected.delete(select):state.selected.add(select);render();return;}if(e.target.dataset.show)showSounds(e.target.dataset.show);const id=e.target.dataset.delete;if(id){const g=state.groups.find(x=>x.id===id);await deleteFiles(g);state.groups=state.groups.filter(x=>x.id!==id);state.selected.delete(id);persist();$('sounds').innerHTML='';render();}};
+  $('groups').onchange=e=>{const id=e.target.dataset.select;if(!id)return;e.target.checked?state.selected.add(id):state.selected.delete(id);render();};
+  $('sounds').onclick=e=>{const ref=e.target.dataset.preview||e.target.dataset.play;if(!ref)return;const [id,index]=ref.split(':');const g=state.groups.find(x=>x.id===id);playSound(g.sounds[+index],Boolean(e.target.dataset.preview));};
 
-            document
-                .querySelector("button")
-                .addEventListener("click", async () => {
-                    players++;
-                    document.querySelector(
-                        "h3"
-                    ).innerText = `${players} Sound Players Active`;
-                    while (true) {
-                        playRandomSound();
-                        createAnimatedDiv();
-                        const timeout = Math.random() * (120 - 5) + 5;
-                        await wait(timeout);
-                    }
-                });
-            function createAnimatedDiv() {
-                // Create the div
-                const div = document.createElement("div");
-                div.style.width = "50px";
-                div.style.height = "50px";
-                div.style.position = "fixed";
+  $('localFiles').onchange=async e=>{const files=[...e.target.files];if(!files.length)return;const name=$('groupName').value.trim()||'My local sounds';const id=crypto.randomUUID();const sounds=[];for(const file of files){const key=`${id}:${file.name}`;await putFile(key,file);sounds.push({name:file.name,key});}state.groups.push({id,name,kind:'local',sounds});state.selected.add(id);persist();render();e.target.value='';toast(`Added ${sounds.length} local sounds.`);};
 
-                // Random position
-                const maxX = window.innerWidth - 50;
-                const maxY = window.innerHeight - 50;
-                div.style.left = `${Math.random() * maxX}px`;
-                div.style.top = `${Math.random() * maxY}px`;
-
-                // Initial style for transition
-                div.style.transition = "transform 2s ease, opacity 2s ease";
-                div.style.opacity = "1";
-
-                // Add to the document
-                document.body.appendChild(div);
-
-                // Apply random rotation, shrink, and fade out after a brief delay
-                setTimeout(() => {
-                    let rotation = Math.random() * 360; // Random rotation angle
-                    rotation = Math.random() >= 0.5 ? rotation * -1 : rotation;
-                    div.style.transform = `rotate(${rotation}deg) scale(0)`; // Shrink and rotate
-                    div.style.opacity = "0"; // Fade out
-                }, 1100);
-
-                // Remove the div after the animation ends
-                setTimeout(() => {
-                    div.remove();
-                }, 3100);
-            }
-        </script>
-    </body>
+  function candidate(pattern,n){
+    let url=pattern.includes('{n}')?pattern.replaceAll('{n}',n):`${pattern.replace(/\/$/,'')}/sound${n}.mp3`;
+    const github=url.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/(?:tree|blob)\/([^/]+)\/(.+)$/);
+    if(github)url=`https://raw.githubusercontent.com/${github[1]}/${github[2]}/${github[3]}/${github[4]}`;
+    return url;
+  }
+  async function exists(url){try{let r=await fetch(url,{method:'HEAD'});if(r.ok)return true;if(r.status!==405)return false;r=await fetch(url,{headers:{Range:'bytes=0-0'}});return r.ok;}catch{return false;}}
+  $('scan').onclick=async()=>{const button=$('scan'),pattern=$('remoteUrl').value.trim(),name=$('groupName').value.trim()||'Remote sounds';if(!pattern)return toast('Enter a remote URL first.');button.disabled=true;const start=Math.max(0,+$('startNumber').value||0),sounds=[];$('scanStatus').textContent='Looking for sounds…';for(let n=start;n<start+500;n++){const url=candidate(pattern,n);$('scanStatus').textContent=`Checking ${n}… ${sounds.length} found`;if(!await exists(url))break;sounds.push({name:url.split('/').pop(),url});}button.disabled=false;if(!sounds.length){$('scanStatus').textContent='No playable files found. Check the URL and CORS settings.';return;}const id=crypto.randomUUID();state.groups.push({id,name,kind:'remote',sounds});state.selected.add(id);persist();render();$('scanStatus').textContent=`Added ${sounds.length} sounds.`;};
+  render();
+</script>
+</body>
 </html>
