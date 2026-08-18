@@ -99,7 +99,7 @@
                 <div class="form-stack">
                     <input id="remote-name" type="text" placeholder="Collection name" maxlength="60">
                     <input id="remote-url" type="url" placeholder="https://example.com/sounds/1.mp3">
-                    <button id="scan-url" class="primary">Find numbered sounds</button>
+                    <div class="button-row"><button id="scan-url" class="primary">Find numbered sounds</button><button id="import-manifest" class="secondary">Import manifest</button></div>
                 </div>
                 <p id="notice" class="notice" role="status"></p>
             </aside>
@@ -278,6 +278,30 @@
             if (!sounds.length) return message("The first URL could not be read. The host must allow browser audio requests.", true);
             const collection = { id: ids(), name, type: "remote", sounds }; collections.push(collection); saveCollections(); currentId = collection.id; $("#remote-name").value = ""; $("#remote-url").value = ""; message(`Added ${sounds.length} remote sound${sounds.length === 1 ? "" : "s"}.`); render();
         }
+        function manifestSoundName(url) { const file = url.pathname.split("/").pop() || "Sound"; return decodeURIComponent(file).replace(/\.[^.]+$/, ""); }
+        function parseManifest(text, manifestUrl) {
+            const lines = text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith("#"));
+            const titleLine = lines.find((line) => /^title\s*:/i.test(line));
+            if (!titleLine) throw new Error("The manifest needs a title: line.");
+            const name = titleLine.replace(/^title\s*:/i, "").trim();
+            if (!name) throw new Error("The manifest title cannot be empty.");
+            const entries = lines.filter((line) => !/^title\s*:/i.test(line));
+            if (!entries.length) throw new Error("The manifest does not list any sounds.");
+            return { name, sounds: entries.map((entry) => { const url = new URL(entry, manifestUrl); return { id: ids(), name: manifestSoundName(url), url: url.href, selected: true }; }) };
+        }
+        async function importManifest() {
+            const input = $("#remote-url").value.trim();
+            if (!input) return message("Enter the manifest URL first.", true);
+            const manifestUrl = normalizeAudioUrl(input);
+            message("Reading manifest...");
+            try {
+                const response = await fetch(manifestUrl);
+                if (!response.ok) throw new Error(`The manifest could not be read (${response.status}).`);
+                const parsed = parseManifest(await response.text(), manifestUrl);
+                const collection = { id: ids(), name: parsed.name, type: "remote", sounds: parsed.sounds };
+                collections.push(collection); saveCollections(); currentId = collection.id; $("#remote-url").value = ""; message(`Added ${collection.sounds.length} sound${collection.sounds.length === 1 ? "" : "s"} from ${collection.name}.`); render();
+            } catch (error) { message(error.message || "Could not import this manifest. The host may not allow browser requests.", true); }
+        }
         async function deleteSound(soundId) { const collection = currentCollection(); const sound = collection.sounds.find((item) => item.id === soundId); if (!sound) return; openModal({ title: "Delete sound", copy: `Remove ${sound.name} from ${collection.name}? This cannot be undone.`, confirmLabel: "Delete sound", danger: true, onConfirm: async () => { await removeBlob(soundId); collection.sounds = collection.sounds.filter((item) => item.id !== soundId); saveCollections(); render(); } }); }
         async function deleteCollection() { const collection = currentCollection(); if (collection.type === "built-in") return; openModal({ title: "Delete collection", copy: `Delete ${collection.name} and its local audio files? This cannot be undone.`, confirmLabel: "Delete collection", danger: true, onConfirm: async () => { for (const sound of collection.sounds.filter((item) => item.local)) await removeBlob(sound.id); collections = collections.filter((item) => item.id !== collection.id); currentId = BUILTIN_ID; saveCollections(); render(); } }); }
         document.addEventListener("click", (event) => {
@@ -292,6 +316,7 @@
         $("#choose-files").addEventListener("click", () => $("#file-input").click());
         $("#add-files").addEventListener("click", addLocalFiles);
         $("#scan-url").addEventListener("click", scanRemoteCollection);
+        $("#import-manifest").addEventListener("click", importManifest);
         $("#play-selected").addEventListener("click", startPlayer);
         $("#stop-all").addEventListener("click", stopAll);
         $("#delete-collection").addEventListener("click", deleteCollection);
