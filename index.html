@@ -45,12 +45,9 @@
     .group-meta { color:var(--muted); font-size:12px; }
     .icon { padding:6px 9px; background:transparent; }
     .sounds { margin-top:20px; }
-    .sound { display:grid; grid-template-columns:auto minmax(100px,1fr) auto auto; gap:8px; align-items:center; padding:9px 0; border-top:1px solid var(--line); }
-    .sound input { width:17px; height:17px; accent-color:var(--green); }
+    .sound { display:grid; grid-template-columns:1fr auto auto; gap:8px; align-items:center; padding:9px 0; border-top:1px solid var(--line); }
     .sound-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .sound button { padding:6px 10px; }
-    .sound-tools { grid-column:2/-1; display:flex; justify-content:flex-end; gap:8px; }
-    .sound-tools select { min-width:150px; border:1px solid var(--line); border-radius:7px; background:#0f110f; color:var(--ink); padding:6px; font:inherit; }
     .now-playing { min-height:24px; color:var(--orange); margin-top:12px; font-size:12px; }
     .small { font-size:11px; color:var(--muted); }
     #toast { position:fixed; right:20px; bottom:20px; max-width:360px; background:var(--ink); color:#111; padding:12px 16px; border-radius:9px; transform:translateY(100px); opacity:0; transition:.25s; z-index:10; }
@@ -83,7 +80,7 @@
       <div class="hint" id="scanStatus" aria-live="polite"></div>
       <div class="divider"></div>
       <div class="hint">Or choose audio files already on this device. They stay in this browser—nothing is uploaded.</div>
-      <div class="row"><label class="file-label" for="localFiles">Choose audio files</label><input id="localFiles" type="file" accept="audio/*" multiple><button id="newCollection">New empty collection</button></div>
+      <div class="row"><label class="file-label" for="localFiles">Choose audio files</label><input id="localFiles" type="file" accept="audio/*" multiple></div>
     </section>
 
     <section class="card">
@@ -99,7 +96,7 @@
 
 <script>
   const bundled = Array.from({length: 37}, (_, i) => ({name:`sound${i}.mp3`, url:`./sounds/sound${i}.mp3`}));
-  const state = { groups: [], selected: new Set(), excluded: new Set(JSON.parse(localStorage.getItem('sound-garden-excluded') || '[]')), players: [], volume: .65, preview: null, expandedGroup: null };
+  const state = { groups: [], selected: new Set(), players: [], volume: .65, preview: null };
   const $ = id => document.getElementById(id);
   const saved = JSON.parse(localStorage.getItem('sound-garden-groups') || '[]');
   state.groups = [{id:'bundled', name:'Original sounds', kind:'bundled', sounds:bundled}, ...saved];
@@ -114,54 +111,40 @@
   async function putFile(key, file) { const db=await dbPromise; return new Promise((res,rej)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').put(file,key);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);}); }
   async function getFile(key) { const db=await dbPromise; return new Promise((res,rej)=>{const req=db.transaction('files').objectStore('files').get(key);req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error);}); }
   async function deleteFiles(group) { if(group.kind!=='local')return; const db=await dbPromise; const tx=db.transaction('files','readwrite'); group.sounds.forEach(s=>tx.objectStore('files').delete(s.key)); }
-  async function deleteFile(key) { const db=await dbPromise; return new Promise((res,rej)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').delete(key);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);}); }
-  function persist() { localStorage.setItem('sound-garden-groups', JSON.stringify(state.groups.filter(g=>g.id!=='bundled')));localStorage.setItem('sound-garden-excluded',JSON.stringify([...state.excluded])); }
+  function persist() { localStorage.setItem('sound-garden-groups', JSON.stringify(state.groups.filter(g=>g.id!=='bundled'))); }
   function toast(message) { $('toast').textContent=message; $('toast').classList.add('show'); setTimeout(()=>$('toast').classList.remove('show'),2600); }
   function escapeHtml(value) { const d=document.createElement('div'); d.textContent=value; return d.innerHTML; }
-  function soundId(sound) { return sound.key||sound.url; }
 
   function render() {
     $('empty').hidden=state.groups.length>0;
     $('groups').innerHTML=state.groups.map(g=>`<div class="group ${state.selected.has(g.id)?'selected':''}">
-      <input type="checkbox" ${state.selected.has(g.id)&&g.sounds.some(s=>!state.excluded.has(soundId(s)))?'checked':''} data-select="${g.id}" aria-label="Use ${escapeHtml(g.name)}">
+      <input type="checkbox" ${state.selected.has(g.id)?'checked':''} data-select="${g.id}" aria-label="Use ${escapeHtml(g.name)}">
       <div><div class="group-name">${escapeHtml(g.name)}</div><div class="group-meta">${g.sounds.length} sound${g.sounds.length===1?'':'s'} · ${g.kind}</div></div>
-      <button class="icon" data-show="${g.id}" aria-label="${state.expandedGroup===g.id?'Hide':'Show'} sounds" aria-expanded="${state.expandedGroup===g.id}">${state.expandedGroup===g.id?'⌃':'⌄'}</button>
+      <button class="icon" data-show="${g.id}" aria-label="Show sounds">⌄</button>
       ${g.id==='bundled'?'':`<button class="icon danger" data-delete="${g.id}" aria-label="Delete collection">×</button>`}
     </div>`).join('');
-    state.groups.forEach(g=>{const box=$('groups').querySelector(`[data-select="${g.id}"]`);if(box)box.indeterminate=state.selected.has(g.id)&&g.sounds.some(s=>state.excluded.has(soundId(s)))&&g.sounds.some(s=>!state.excluded.has(soundId(s)));});
   }
-  function toggleSounds(id) {
-    if(state.expandedGroup===id){state.expandedGroup=null;$('sounds').innerHTML='';render();return;}
+  function showSounds(id) {
     const g=state.groups.find(x=>x.id===id); if(!g)return;
-    state.expandedGroup=id;
-    const localGroups=state.groups.filter(x=>x.kind==='local'&&x.id!==id);
-    $('sounds').innerHTML=`<h2>${escapeHtml(g.name)} <span class="small">(${g.sounds.length})</span></h2>`+g.sounds.map((s,i)=>`<div class="sound">
-      <input type="checkbox" data-sound-select="${id}:${i}" ${state.selected.has(id)&&!state.excluded.has(soundId(s))?'checked':''} aria-label="Include ${escapeHtml(s.name)}">
-      <span class="sound-name">${escapeHtml(s.name)}</span><button data-preview="${id}:${i}">Preview</button><button data-play="${id}:${i}">Play</button>
-      ${g.kind==='local'?`<div class="sound-tools">${localGroups.length?`<select data-move-target="${id}:${i}" aria-label="Destination collection">${localGroups.map(x=>`<option value="${x.id}">${escapeHtml(x.name)}</option>`).join('')}</select><button data-move="${id}:${i}">Move</button>`:''}<button class="danger" data-delete-sound="${id}:${i}">Delete</button></div>`:''}
-    </div>`).join('');
-    render();
+    $('sounds').innerHTML=`<h2>${escapeHtml(g.name)} <span class="small">(${g.sounds.length})</span></h2>`+g.sounds.map((s,i)=>`<div class="sound"><span class="sound-name">${escapeHtml(s.name)}</span><button data-preview="${id}:${i}">Preview</button><button data-play="${id}:${i}">Play</button></div>`).join('');
   }
-  function refreshSounds(id) { state.expandedGroup=null;toggleSounds(id); }
   async function soundSource(sound) { if(sound.url)return sound.url; const file=await getFile(sound.key); if(!file)throw new Error('Local file is missing'); return URL.createObjectURL(file); }
   async function playSound(sound, preview=false) {
     try { if(preview&&state.preview){state.preview.pause();state.preview=null;} const src=await soundSource(sound); const audio=new Audio(src); audio.volume=state.volume; if(preview)state.preview=audio; audio.onended=()=>{if(src.startsWith('blob:'))URL.revokeObjectURL(src);if(state.preview===audio)state.preview=null;}; await audio.play(); $('nowPlaying').textContent=`Playing · ${sound.name}`; }
     catch(error){ toast(`Could not play sound: ${error.message}`); }
   }
-  function selectedSounds() { return state.groups.filter(g=>state.selected.has(g.id)).flatMap(g=>g.sounds.filter(s=>!state.excluded.has(soundId(s)))); }
+  function selectedSounds() { return state.groups.filter(g=>state.selected.has(g.id)).flatMap(g=>g.sounds); }
   function schedulePlayer(player) { if(!player.active)return; const delay=(Math.random()*115+5)*1000; player.timer=setTimeout(async()=>{const list=selectedSounds();if(list.length)await playSound(list[Math.floor(Math.random()*list.length)]);schedulePlayer(player);},delay); }
   function updatePlayers() { $('playerCount').textContent=state.players.length; $('stop').disabled=!state.players.length; }
 
   $('start').onclick=()=>{ if(!selectedSounds().length)return toast('Select a collection with sounds first.'); const player={active:true,timer:null};state.players.push(player);playSound(selectedSounds()[Math.floor(Math.random()*selectedSounds().length)]);schedulePlayer(player);updatePlayers(); };
   $('stop').onclick=()=>{state.players.forEach(p=>{p.active=false;clearTimeout(p.timer)});state.players=[];updatePlayers();};
   $('volume').oninput=e=>{state.volume=+e.target.value;$('volumeValue').textContent=`${Math.round(state.volume*100)}%`;if(state.preview)state.preview.volume=state.volume;};
-  $('groups').onclick=async e=>{if(e.target.dataset.show)toggleSounds(e.target.dataset.show);const id=e.target.dataset.delete;if(id){const g=state.groups.find(x=>x.id===id);await deleteFiles(g);g.sounds.forEach(s=>state.excluded.delete(soundId(s)));state.groups=state.groups.filter(x=>x.id!==id);state.selected.delete(id);if(state.expandedGroup===id){state.expandedGroup=null;$('sounds').innerHTML='';}persist();render();}};
-  $('groups').onchange=e=>{const id=e.target.dataset.select;if(!id)return;const g=state.groups.find(x=>x.id===id);if(e.target.checked){state.selected.add(id);g.sounds.forEach(s=>state.excluded.delete(soundId(s)));}else{state.selected.delete(id);}persist();render();};
-  $('sounds').onchange=e=>{const ref=e.target.dataset.soundSelect;if(!ref)return;const [id,index]=ref.split(':'),g=state.groups.find(x=>x.id===id),sound=g.sounds[+index];if(e.target.checked){state.selected.add(id);state.excluded.delete(soundId(sound));}else state.excluded.add(soundId(sound));persist();render();};
-  $('sounds').onclick=async e=>{const ref=e.target.dataset.preview||e.target.dataset.play;if(ref){const [id,index]=ref.split(':');const g=state.groups.find(x=>x.id===id);playSound(g.sounds[+index],Boolean(e.target.dataset.preview));return;}const deleteRef=e.target.dataset.deleteSound;if(deleteRef){const [id,index]=deleteRef.split(':'),g=state.groups.find(x=>x.id===id),sound=g.sounds[+index];await deleteFile(sound.key);state.excluded.delete(soundId(sound));g.sounds.splice(+index,1);persist();refreshSounds(id);toast('Sound deleted.');return;}const moveRef=e.target.dataset.move;if(moveRef){const [id,index]=moveRef.split(':'),source=state.groups.find(x=>x.id===id),select=$('sounds').querySelector(`[data-move-target="${moveRef}"]`),target=state.groups.find(x=>x.id===select.value),sound=source.sounds.splice(+index,1)[0];target.sounds.push(sound);persist();refreshSounds(id);toast(`Moved to ${target.name}.`);}};
+  $('groups').onclick=async e=>{const select=e.target.dataset.select;if(select){state.selected.has(select)?state.selected.delete(select):state.selected.add(select);render();return;}if(e.target.dataset.show)showSounds(e.target.dataset.show);const id=e.target.dataset.delete;if(id){const g=state.groups.find(x=>x.id===id);await deleteFiles(g);state.groups=state.groups.filter(x=>x.id!==id);state.selected.delete(id);persist();$('sounds').innerHTML='';render();}};
+  $('groups').onchange=e=>{const id=e.target.dataset.select;if(!id)return;e.target.checked?state.selected.add(id):state.selected.delete(id);render();};
+  $('sounds').onclick=e=>{const ref=e.target.dataset.preview||e.target.dataset.play;if(!ref)return;const [id,index]=ref.split(':');const g=state.groups.find(x=>x.id===id);playSound(g.sounds[+index],Boolean(e.target.dataset.preview));};
 
   $('localFiles').onchange=async e=>{const files=[...e.target.files];if(!files.length)return;const name=$('groupName').value.trim()||'My local sounds';const id=crypto.randomUUID();const sounds=[];for(const file of files){const key=`${id}:${file.name}`;await putFile(key,file);sounds.push({name:file.name,key});}state.groups.push({id,name,kind:'local',sounds});state.selected.add(id);persist();render();e.target.value='';toast(`Added ${sounds.length} local sounds.`);};
-  $('newCollection').onclick=()=>{const name=$('groupName').value.trim()||'New collection';const id=crypto.randomUUID();state.groups.push({id,name,kind:'local',sounds:[]});state.selected.add(id);persist();render();toast(`Created ${name}.`);};
 
   function candidate(pattern,n){
     let url=pattern.includes('{n}')?pattern.replaceAll('{n}',n):`${pattern.replace(/\/$/,'')}/sound${n}.mp3`;
