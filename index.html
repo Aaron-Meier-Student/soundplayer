@@ -1,137 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Occasional Sounds</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap"
-            rel="stylesheet"
-        />
-        <style>
-            * {
-                font-family: Montserrat;
-                user-select: none;
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Occasional Sounds</title>
+    <style>
+        :root { color-scheme: light; --ink:#18212b; --muted:#637080; --line:#dbe1e7; --panel:#fff; --ground:#f4f7f9; --accent:#0969da; --accent-dark:#0756b3; --danger:#b42318; --select:#eaf3ff; }
+        * { box-sizing:border-box; }
+        body { margin:0; min-width:320px; background:var(--ground); color:var(--ink); font:14px/1.4 Arial, sans-serif; }
+        button, input { font:inherit; }
+        button { border:0; cursor:pointer; }
+        .app { max-width:1240px; margin:0 auto; padding:30px 24px 48px; }
+        .topbar { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:28px; }
+        h1 { font-size:24px; line-height:1.1; margin:0; letter-spacing:0; }
+        .subtle { color:var(--muted); margin:5px 0 0; }
+        .player-status { display:flex; align-items:center; gap:12px; white-space:nowrap; }
+        .badge { min-width:28px; padding:3px 8px; border-radius:12px; text-align:center; color:#fff; background:var(--accent); font-weight:700; }
+        .main-grid { display:grid; grid-template-columns:310px minmax(0,1fr); gap:22px; align-items:start; }
+        .panel { background:var(--panel); border:1px solid var(--line); border-radius:7px; }
+        .sidebar { padding:16px; }
+        .section-title { display:flex; justify-content:space-between; align-items:center; gap:8px; margin:0 0 12px; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+        .collection-list { display:grid; gap:4px; max-height:390px; overflow:auto; }
+        .collection { width:100%; display:flex; align-items:center; gap:9px; padding:9px; background:transparent; border-radius:5px; text-align:left; color:var(--ink); }
+        .collection:hover { background:#f2f5f7; }
+        .collection.active { background:var(--select); color:#0756b3; }
+        .collection input { margin:0; accent-color:var(--accent); }
+        .collection-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+        .collection-count { color:var(--muted); font-size:12px; }
+        .divider { height:1px; background:var(--line); margin:16px 0; }
+        .form-stack { display:grid; gap:8px; }
+        input[type="text"], input[type="url"] { width:100%; border:1px solid #c5ced7; border-radius:5px; padding:9px 10px; color:var(--ink); background:#fff; }
+        input:focus { outline:2px solid #b9d7f8; border-color:var(--accent); }
+        .button-row { display:flex; gap:8px; flex-wrap:wrap; }
+        .primary, .secondary, .icon-button { border-radius:5px; font-weight:700; transition:background .15s, border-color .15s; }
+        .primary { padding:9px 12px; background:var(--accent); color:#fff; }
+        .primary:hover { background:var(--accent-dark); }
+        .secondary { padding:8px 11px; border:1px solid #b9c5d0; background:#fff; color:#263646; }
+        .secondary:hover { background:#f5f7f9; }
+        .danger { color:var(--danger); border-color:#efc4c0; }
+        .primary.danger { background:var(--danger); border-color:var(--danger); color:#fff; }
+        .primary.danger:hover { background:#8f1a12; }
+        .workspace { overflow:hidden; }
+        .workspace-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:20px 20px 16px; border-bottom:1px solid var(--line); }
+        h2 { margin:0; font-size:20px; letter-spacing:0; }
+        .master { display:flex; align-items:center; gap:9px; color:var(--muted); font-size:12px; }
+        .master input { width:130px; accent-color:var(--accent); }
+        .toolbar { display:flex; align-items:center; gap:8px; padding:12px 20px; border-bottom:1px solid var(--line); background:#fbfcfd; flex-wrap:wrap; }
+        .toolbar .spacer { flex:1; }
+        .sound-list { min-height:260px; }
+        .sound-row { display:grid; grid-template-columns:34px minmax(0,1fr) auto auto; align-items:center; gap:10px; padding:10px 20px; border-bottom:1px solid #edf0f2; }
+        .sound-row:last-child { border-bottom:0; }
+        .sound-row.selected { background:#f5faff; }
+        .sound-row input { margin:0; accent-color:var(--accent); }
+        .sound-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+        .sound-source { color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:250px; }
+        .icon-button { width:32px; height:30px; display:grid; place-items:center; padding:0; border:1px solid #c5ced7; background:#fff; color:#304252; font-size:14px; }
+        .icon-button:hover { background:#f1f5f8; }
+        .icon-button.playing { color:var(--danger); border-color:#efc4c0; background:#fff5f4; }
+        .icon-button.delete:hover { color:var(--danger); background:#fff5f4; border-color:#efc4c0; }
+        .empty { padding:54px 24px; color:var(--muted); text-align:center; }
+        .footer-note { color:var(--muted); font-size:12px; padding:12px 20px; border-top:1px solid var(--line); }
+        .recent { padding:16px 20px; border-top:1px solid var(--line); background:#fbfcfd; }
+        .recent-list { display:flex; flex-wrap:wrap; gap:7px; }
+        .recent-item { max-width:220px; padding:5px 8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border:1px solid var(--line); border-radius:4px; background:#fff; color:#405163; font-size:12px; }
+        .recent-item strong { color:var(--ink); }
+        .recent-empty { color:var(--muted); font-size:12px; }
+        .notice { min-height:20px; margin:12px 0 0; color:var(--muted); font-size:12px; }
+        .notice.error { color:var(--danger); }
+        .hidden { display:none; }
+        .modal-backdrop { position:fixed; inset:0; z-index:20; display:grid; place-items:center; padding:20px; background:rgba(24,33,43,.45); }
+        .modal-backdrop.hidden { display:none; }
+        .modal { width:min(100%, 410px); padding:20px; border:1px solid var(--line); border-radius:7px; background:#fff; box-shadow:0 18px 48px rgba(24,33,43,.22); }
+        .modal h2 { font-size:18px; }
+        .modal-copy { margin:8px 0 16px; color:var(--muted); }
+        .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+        @media (max-width:760px) { .app { padding:20px 14px 32px; } .topbar { align-items:flex-start; flex-direction:column; gap:14px; } .main-grid { grid-template-columns:1fr; } .sidebar { order:2; } .workspace-head { flex-direction:column; } .sound-source { display:none; } .sound-row { grid-template-columns:28px minmax(0,1fr) auto auto; padding:10px 14px; } .toolbar { padding:12px 14px; } .footer-note { padding:12px 14px; } }
+    </style>
+</head>
+<body>
+    <main class="app">
+        <header class="topbar">
+            <div><h1>Occasional Sounds</h1><p class="subtle">Choose a collection and start a random sound player.</p></div>
+            <div class="player-status"><span><strong id="active-count">0</strong> active players</span><button id="stop-all" class="secondary">Stop all</button></div>
+        </header>
+        <div class="main-grid">
+            <aside class="sidebar panel">
+                <p class="section-title">Collections <button id="new-collection" class="icon-button" title="Create collection" aria-label="Create collection">+</button></p>
+                <div id="collection-list" class="collection-list"></div>
+                <div class="divider"></div>
+                <p class="section-title">Add local sounds</p>
+                <div class="form-stack">
+                    <input id="local-name" type="text" placeholder="Collection name" maxlength="60">
+                    <input id="file-input" type="file" accept="audio/*" multiple class="hidden">
+                    <div class="button-row"><button id="choose-files" class="secondary">Choose files</button><button id="add-files" class="primary">Add local files</button></div>
+                </div>
+                <div class="divider"></div>
+                <p class="section-title">Add from URL</p>
+                <div class="form-stack">
+                    <input id="remote-name" type="text" placeholder="Collection name" maxlength="60">
+                    <input id="remote-url" type="url" placeholder="https://example.com/sounds/1.mp3">
+                    <button id="scan-url" class="primary">Find numbered sounds</button>
+                </div>
+                <p id="notice" class="notice" role="status"></p>
+            </aside>
+            <section class="workspace panel">
+                <div class="workspace-head">
+                    <div><h2 id="current-title">Built-in sounds</h2><p id="current-detail" class="subtle"></p></div>
+                    <label class="master">Master volume <input id="master-volume" type="range" min="0" max="100" value="80"><span id="volume-value">80%</span></label>
+                </div>
+                <div class="toolbar">
+                    <button id="select-all" class="secondary">Select all</button>
+                    <button id="select-none" class="secondary">Select none</button>
+                    <span class="spacer"></span>
+                    <button id="play-selected" class="primary">Start random player</button>
+                    <button id="delete-collection" class="secondary danger">Delete collection</button>
+                </div>
+                <div id="sound-list" class="sound-list"></div>
+                <div class="footer-note">Random players use every checked sound across all collections. Use the play button beside a sound to preview it.</div>
+                <div class="recent"><p class="section-title">Recently played</p><div id="recent-list" class="recent-list"><span class="recent-empty">Sounds you play will appear here.</span></div></div>
+            </section>
+        </div>
+    </main>
+    <div id="modal-backdrop" class="modal-backdrop hidden" role="presentation">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <h2 id="modal-title"></h2>
+            <p id="modal-copy" class="modal-copy"></p>
+            <input id="modal-input" type="text" class="hidden" maxlength="60">
+            <div class="modal-actions"><button id="modal-cancel" class="secondary">Cancel</button><button id="modal-confirm" class="primary">Confirm</button></div>
+        </div>
+    </div>
+    <script>
+        const BUILTIN_ID = "builtin";
+        const BUILTIN_COUNT = 38;
+        const DB_NAME = "occasional-sounds";
+        const DB_VERSION = 1;
+        let collections = [];
+        let currentId = BUILTIN_ID;
+        let db;
+        let masterVolume = 0.8;
+        const players = new Map();
+        const liveAudios = new Set();
+        const recentlyPlayed = [];
+        let modalAction = null;
+        let previewState = null;
+        let nextPlayerId = 1;
+
+        const $ = (selector) => document.querySelector(selector);
+        const ids = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+        const builtInCollection = () => ({ id: BUILTIN_ID, name: "Built-in sounds", type: "built-in", sounds: Array.from({ length: BUILTIN_COUNT }, (_, index) => ({ id: `builtin-${index}`, name: `Sound ${index + 1}`, url: `./sounds/sound${index}.mp3`, selected: true })) });
+
+        function openDatabase() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = () => request.result.createObjectStore("audio", { keyPath: "id" });
+                request.onsuccess = () => { db = request.result; resolve(); };
+                request.onerror = () => reject(request.error);
+            });
+        }
+        function databaseRequest(mode, action) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction("audio", mode);
+                const request = action(transaction.objectStore("audio"));
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+        const saveBlob = (id, blob) => databaseRequest("readwrite", (store) => store.put({ id, blob }));
+        const getBlob = (id) => databaseRequest("readonly", (store) => store.get(id));
+        const removeBlob = (id) => databaseRequest("readwrite", (store) => store.delete(id));
+        function saveCollections() { localStorage.setItem("occasional-sound-collections", JSON.stringify(collections)); }
+        function loadCollections() { try { collections = JSON.parse(localStorage.getItem("occasional-sound-collections")) || [builtInCollection()]; } catch { collections = [builtInCollection()]; } if (!collections.some((item) => item.id === BUILTIN_ID)) collections.unshift(builtInCollection()); }
+        function currentCollection() { return collections.find((collection) => collection.id === currentId) || collections[0]; }
+        function message(text, isError = false) { const notice = $("#notice"); notice.textContent = text; notice.classList.toggle("error", isError); }
+        function openModal({ title, copy, confirmLabel, danger = false, inputPlaceholder = "", onConfirm }) {
+            $("#modal-title").textContent = title;
+            $("#modal-copy").textContent = copy;
+            $("#modal-confirm").textContent = confirmLabel;
+            $("#modal-confirm").classList.toggle("danger", danger);
+            $("#modal-input").placeholder = inputPlaceholder;
+            $("#modal-input").value = "";
+            $("#modal-input").classList.toggle("hidden", !inputPlaceholder);
+            $("#modal-backdrop").classList.remove("hidden");
+            modalAction = onConfirm;
+            if (inputPlaceholder) setTimeout(() => $("#modal-input").focus(), 0);
+            else $("#modal-confirm").focus();
+        }
+        function closeModal() { $("#modal-backdrop").classList.add("hidden"); modalAction = null; }
+        function render() {
+            const active = currentCollection();
+            $("#collection-list").innerHTML = collections.map((collection) => `<button class="collection ${collection.id === currentId ? "active" : ""}" data-collection="${collection.id}"><input type="checkbox" data-collection-select="${collection.id}" ${collection.sounds.every((sound) => sound.selected) ? "checked" : ""} aria-label="Select all sounds in ${escapeHtml(collection.name)}"><span class="collection-name">${escapeHtml(collection.name)}</span><span class="collection-count">${collection.sounds.length}</span></button>`).join("");
+            $("#current-title").textContent = active.name;
+            $("#current-detail").textContent = active.type === "built-in" ? "Sounds bundled with this page" : active.type === "local" ? "Stored in this browser" : "Remote numbered sound collection";
+            $("#delete-collection").disabled = active.type === "built-in";
+            $("#delete-collection").classList.toggle("hidden", active.type === "built-in");
+            $("#sound-list").innerHTML = active.sounds.length ? active.sounds.map((sound) => { const playing = previewState?.soundId === sound.id; return `<div class="sound-row ${sound.selected ? "selected" : ""}"><input type="checkbox" data-sound="${sound.id}" ${sound.selected ? "checked" : ""} aria-label="Include ${escapeHtml(sound.name)}"><span class="sound-name" title="${escapeHtml(sound.name)}">${escapeHtml(sound.name)}</span><span class="sound-source" title="${escapeHtml(sound.url || "Local browser file")}">${sound.local ? "Local file" : escapeHtml(sound.url)}</span><button class="icon-button ${playing ? "playing" : ""}" data-preview="${sound.id}" title="${playing ? "Stop preview" : `Preview ${escapeHtml(sound.name)}`}" aria-label="${playing ? "Stop preview" : `Preview ${escapeHtml(sound.name)}`}">${playing ? "&#9632;" : "&#9654;"}</button>${sound.local ? `<button class="icon-button delete" data-delete-sound="${sound.id}" title="Delete ${escapeHtml(sound.name)}" aria-label="Delete ${escapeHtml(sound.name)}">x</button>` : "<span></span>"}</div>`; }).join("") : '<div class="empty">No sounds in this collection yet.</div>';
+            $("#active-count").textContent = players.size;
+            $("#recent-list").innerHTML = recentlyPlayed.length ? recentlyPlayed.map((item) => `<span class="recent-item" title="${escapeHtml(item.name)} from ${escapeHtml(item.collection)}"><strong>${escapeHtml(item.name)}</strong> <span>${escapeHtml(item.collection)}</span></span>`).join("") : '<span class="recent-empty">Sounds you play will appear here.</span>';
+        }
+        function escapeHtml(value) { return String(value).replace(/[&<>"]/g, (char) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" })[char]); }
+        function updateSelection(collectionId, soundId, selected) { const collection = collections.find((item) => item.id === collectionId); const sound = collection.sounds.find((item) => item.id === soundId); sound.selected = selected; saveCollections(); render(); }
+        async function soundSource(sound) { if (!sound.local) return sound.url; const record = await getBlob(sound.id); if (!record) throw new Error("This browser file is no longer available."); return URL.createObjectURL(record.blob); }
+        function recordPlay(sound, collection) { recentlyPlayed.unshift({ name: sound.name, collection }); if (recentlyPlayed.length > 12) recentlyPlayed.pop(); render(); }
+        function stopPreview(shouldRender = true) {
+            if (!previewState) return;
+            const { audio, src, local } = previewState;
+            if (audio) {
+                liveAudios.delete(audio);
+                audio.pause();
+                audio.src = "";
             }
-
-            html,
-            body {
-                margin: 0;
-                padding: 0;
-                height: 100%;
-                width: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-direction: column;
+            if (local && src) URL.revokeObjectURL(src);
+            previewState = null;
+            if (shouldRender) render();
+        }
+        async function preview(sound) {
+            if (previewState?.soundId === sound.id) return stopPreview();
+            stopPreview(false);
+            try {
+                previewState = { soundId: sound.id, loading: true };
+                render();
+                const src = await soundSource(sound);
+                if (previewState?.soundId !== sound.id || !previewState.loading) { if (sound.local) URL.revokeObjectURL(src); return; }
+                const audio = new Audio(src);
+                previewState = { soundId: sound.id, audio, src, local: Boolean(sound.local) };
+                liveAudios.add(audio);
+                audio.volume = masterVolume;
+                audio.addEventListener("ended", () => { if (previewState?.audio === audio) previewState = null; liveAudios.delete(audio); if (sound.local) URL.revokeObjectURL(src); render(); });
+                await audio.play();
+                recordPlay(sound, currentCollection().name);
+            } catch (error) { stopPreview(false); render(); message(error.message || "Could not preview this sound.", true); }
+        }
+        function startPlayer() {
+            const selected = collections.flatMap((collection) => collection.sounds.filter((sound) => sound.selected).map((sound) => ({ ...sound, collectionName: collection.name })));
+            if (!selected.length) return message("Select at least one sound before starting a player.", true);
+            const id = nextPlayerId++;
+            let stopped = false;
+            let activeAudio;
+            async function loop() {
+                while (!stopped) {
+                    const sound = selected[Math.floor(Math.random() * selected.length)];
+                    try { const src = await soundSource(sound); const audio = new Audio(src); activeAudio = audio; liveAudios.add(audio); audio.volume = masterVolume; await audio.play(); recordPlay(sound, sound.collectionName); audio.addEventListener("ended", () => { liveAudios.delete(audio); if (sound.local) URL.revokeObjectURL(src); }); } catch (error) { console.warn("Audio playback failed", error); }
+                    await new Promise((resolve) => setTimeout(resolve, (Math.random() * 115 + 5) * 1000));
+                }
             }
-
-            h3 {
-                font-size: 22px;
-                z-index: 10;
-            }
-
-            button {
-                outline: none;
-                border: none;
-                border-radius: 6px;
-                padding: 10px 20px;
-                font-weight: 600;
-                font-size: 22px;
-                background-color: blue;
-                color: white;
-                cursor: pointer;
-                transition: 250ms;
-                z-index: 10;
-            }
-
-            button:hover {
-                background-color: rgb(75, 75, 255);
-            }
-
-            div {
-                z-index: 1;
-                background-color: transparent;
-                background-image: url("https://cdn-icons-png.flaticon.com/512/483/483365.png");
-                background-size: cover;
-            }
-        </style>
-    </head>
-    <body>
-        <h3>0 Sound Players Active</h3>
-        <button>Create New Sound Player</button>
-        <script defer>
-            const numberOfSounds = 38;
-            let players = 0;
-
-            function wait(seconds) {
-                return new Promise((resolve) =>
-                    setTimeout(resolve, seconds * 1000)
-                );
-            }
-
-            function playRandomSound() {
-                const randomIndex = Math.floor(Math.random() * numberOfSounds);
-                const audio = new Audio(`./sounds/sound${randomIndex}.mp3`);
-                audio.addEventListener("ended", () => {
-                    audio.src = "";
-                });
-                audio
-                    .play()
-                    .catch((error) =>
-                        console.error("Audio playback failed:", error)
-                    );
-            }
-
-            document
-                .querySelector("button")
-                .addEventListener("click", async () => {
-                    players++;
-                    document.querySelector(
-                        "h3"
-                    ).innerText = `${players} Sound Players Active`;
-                    while (true) {
-                        playRandomSound();
-                        createAnimatedDiv();
-                        const timeout = Math.random() * (120 - 5) + 5;
-                        await wait(timeout);
-                    }
-                });
-            function createAnimatedDiv() {
-                // Create the div
-                const div = document.createElement("div");
-                div.style.width = "50px";
-                div.style.height = "50px";
-                div.style.position = "fixed";
-
-                // Random position
-                const maxX = window.innerWidth - 50;
-                const maxY = window.innerHeight - 50;
-                div.style.left = `${Math.random() * maxX}px`;
-                div.style.top = `${Math.random() * maxY}px`;
-
-                // Initial style for transition
-                div.style.transition = "transform 2s ease, opacity 2s ease";
-                div.style.opacity = "1";
-
-                // Add to the document
-                document.body.appendChild(div);
-
-                // Apply random rotation, shrink, and fade out after a brief delay
-                setTimeout(() => {
-                    let rotation = Math.random() * 360; // Random rotation angle
-                    rotation = Math.random() >= 0.5 ? rotation * -1 : rotation;
-                    div.style.transform = `rotate(${rotation}deg) scale(0)`; // Shrink and rotate
-                    div.style.opacity = "0"; // Fade out
-                }, 1100);
-
-                // Remove the div after the animation ends
-                setTimeout(() => {
-                    div.remove();
-                }, 3100);
-            }
-        </script>
-    </body>
+            players.set(id, () => { stopped = true; if (activeAudio) { liveAudios.delete(activeAudio); activeAudio.pause(); activeAudio.src = ""; } });
+            render(); loop();
+        }
+        function stopAll() { players.forEach((stop) => stop()); players.clear(); stopPreview(false); render(); }
+        async function addLocalFiles() {
+            const files = Array.from($("#file-input").files);
+            const name = $("#local-name").value.trim();
+            if (!name || !files.length) return message("Enter a collection name and choose one or more audio files.", true);
+            let collection = collections.find((item) => item.type === "local" && item.name.toLowerCase() === name.toLowerCase());
+            if (!collection) { collection = { id: ids(), name, type: "local", sounds: [] }; collections.push(collection); }
+            try { for (const file of files) { const id = ids(); await saveBlob(id, file); collection.sounds.push({ id, name: file.name.replace(/\.[^.]+$/, ""), local: true, selected: true }); } saveCollections(); currentId = collection.id; $("#file-input").value = ""; $("#local-name").value = ""; message(`${files.length} local sound${files.length === 1 ? "" : "s"} added to ${collection.name}.`); render(); } catch { message("Your browser could not store these audio files.", true); }
+        }
+        function normalizeAudioUrl(input) {
+            try {
+                const url = new URL(input);
+                const path = url.pathname.split("/").filter(Boolean);
+                const blobIndex = url.hostname === "github.com" ? path.indexOf("blob") : -1;
+                if (blobIndex > 1) {
+                    url.hostname = "raw.githubusercontent.com";
+                    url.pathname = `/${[path[0], path[1], ...path.slice(blobIndex + 1)].join("/")}`;
+                }
+                return url.href;
+            } catch { return input; }
+        }
+        function numberedUrlParts(input) { const match = normalizeAudioUrl(input).match(/^(.*?)(\d+)(\.[a-z0-9]+(?:[?#].*)?)$/i); if (!match) return null; return { before: match[1], number: Number(match[2]), digits: match[2].length, after: match[3] }; }
+        function probeAudio(url, timeout = 7000) { return new Promise((resolve) => { const audio = new Audio(); const timer = setTimeout(() => finish(false), timeout); let finished = false; const finish = (result) => { if (finished) return; finished = true; clearTimeout(timer); audio.src = ""; resolve(result); }; audio.preload = "metadata"; audio.onloadedmetadata = () => finish(true); audio.onerror = () => finish(false); audio.src = url; }); }
+        async function scanRemoteCollection() {
+            const name = $("#remote-name").value.trim(); const seed = $("#remote-url").value.trim(); const parts = numberedUrlParts(seed);
+            if (!name || !parts) return message("Enter a collection name and a URL ending in a numbered audio filename, such as 1.mp3.", true);
+            const sounds = [];
+            message("Checking numbered URLs...");
+            for (let index = parts.number; index < parts.number + 500; index++) { const url = `${parts.before}${String(index).padStart(parts.digits, "0")}${parts.after}`; if (!await probeAudio(url)) break; sounds.push({ id: ids(), name: `Sound ${index}`, url, selected: true }); message(`Found ${sounds.length} sound${sounds.length === 1 ? "" : "s"}...`); }
+            if (!sounds.length) return message("The first URL could not be read. The host must allow browser audio requests.", true);
+            const collection = { id: ids(), name, type: "remote", sounds }; collections.push(collection); saveCollections(); currentId = collection.id; $("#remote-name").value = ""; $("#remote-url").value = ""; message(`Added ${sounds.length} remote sound${sounds.length === 1 ? "" : "s"}.`); render();
+        }
+        async function deleteSound(soundId) { const collection = currentCollection(); const sound = collection.sounds.find((item) => item.id === soundId); if (!sound) return; openModal({ title: "Delete sound", copy: `Remove ${sound.name} from ${collection.name}? This cannot be undone.`, confirmLabel: "Delete sound", danger: true, onConfirm: async () => { await removeBlob(soundId); collection.sounds = collection.sounds.filter((item) => item.id !== soundId); saveCollections(); render(); } }); }
+        async function deleteCollection() { const collection = currentCollection(); if (collection.type === "built-in") return; openModal({ title: "Delete collection", copy: `Delete ${collection.name} and its local audio files? This cannot be undone.`, confirmLabel: "Delete collection", danger: true, onConfirm: async () => { for (const sound of collection.sounds.filter((item) => item.local)) await removeBlob(sound.id); collections = collections.filter((item) => item.id !== collection.id); currentId = BUILTIN_ID; saveCollections(); render(); } }); }
+        document.addEventListener("click", (event) => {
+            const collectionButton = event.target.closest("[data-collection]");
+            if (collectionButton && !event.target.matches("[data-collection-select]")) { currentId = collectionButton.dataset.collection; render(); return; }
+            if (event.target.matches("[data-collection-select]")) { const collection = collections.find((item) => item.id === event.target.dataset.collectionSelect); collection.sounds.forEach((sound) => sound.selected = event.target.checked); saveCollections(); render(); return; }
+            if (event.target.matches("[data-sound]")) return updateSelection(currentId, event.target.dataset.sound, event.target.checked);
+            if (event.target.matches("[data-preview]")) return preview(currentCollection().sounds.find((sound) => sound.id === event.target.dataset.preview));
+            if (event.target.matches("[data-delete-sound]")) return deleteSound(event.target.dataset.deleteSound);
+        });
+        $("#new-collection").addEventListener("click", () => openModal({ title: "New collection", copy: "Create an empty local collection for browser audio files.", confirmLabel: "Create collection", inputPlaceholder: "Collection name", onConfirm: () => { const name = $("#modal-input").value.trim(); if (!name) return message("Enter a collection name.", true); const collection = { id: ids(), name, type: "local", sounds: [] }; collections.push(collection); currentId = collection.id; saveCollections(); render(); } }));
+        $("#choose-files").addEventListener("click", () => $("#file-input").click());
+        $("#add-files").addEventListener("click", addLocalFiles);
+        $("#scan-url").addEventListener("click", scanRemoteCollection);
+        $("#play-selected").addEventListener("click", startPlayer);
+        $("#stop-all").addEventListener("click", stopAll);
+        $("#delete-collection").addEventListener("click", deleteCollection);
+        $("#modal-cancel").addEventListener("click", closeModal);
+        $("#modal-backdrop").addEventListener("click", (event) => { if (event.target === event.currentTarget) closeModal(); });
+        $("#modal-confirm").addEventListener("click", async () => { const action = modalAction; closeModal(); if (action) await action(); });
+        $("#modal-input").addEventListener("keydown", (event) => { if (event.key === "Enter") $("#modal-confirm").click(); });
+        $("#select-all").addEventListener("click", () => { currentCollection().sounds.forEach((sound) => sound.selected = true); saveCollections(); render(); });
+        $("#select-none").addEventListener("click", () => { currentCollection().sounds.forEach((sound) => sound.selected = false); saveCollections(); render(); });
+        $("#master-volume").addEventListener("input", (event) => { masterVolume = Number(event.target.value) / 100; liveAudios.forEach((audio) => audio.volume = masterVolume); $("#volume-value").textContent = `${event.target.value}%`; });
+        openDatabase().then(() => { loadCollections(); render(); }).catch(() => { loadCollections(); message("Local browser storage is unavailable.", true); render(); });
+    </script>
+</body>
 </html>
